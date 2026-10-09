@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Diario de Calorías - México</title>
+    
+    <script>
+        var dailyLog = JSON.parse(localStorage.getItem('myDailyCalorieLog')) || [];
+        var calorieTarget = 2000;
+
+        var BD_LOCAL = {
+            "7622202309038": { nombre: "Chocolate Milka (100g)", calorias: 530 },
+            "7501055300075": { nombre: "Agua Ciel (600ml)", calorias: 0 },
+            "7501055310890": { nombre: "Coca-Cola Original (600ml)", calorias: 240 },
+            "7501055319435": { nombre: "Coca-Cola Sin Azúcar (600ml)", calorias: 0 },
+            "7501000111107": { nombre: "Pan Blanco Bimbo (2 rebanadas)", calorias: 135 },
+            "7501000112401": { nombre: "Donas Bimbo Espolvoreadas (pza)", calorias: 195 },
+            "7501000155606": { nombre: "Medias Noches Bimbo (pza)", calorias: 130 },
+            "7501030467140": { nombre: "Papas Sabritas Sal (42g)", calorias: 224 },
+            "7501011115859": { nombre: "Doritos Nacho (61g)", calorias: 310 },
+            "7501000624027": { nombre: "Leche Lala Entera (250ml)", calorias: 146 },
+            "7501020514106": { nombre: "Yoghu Lala Fresa (220g)", calorias: 178 },
+            "7501001416751": { nombre: "Atún Tuny en Agua (lata)", calorias: 90 },
+            "7501008023530": { nombre: "Frijoles Isadora Bayos (130g)", calorias: 114 },
+            "7501017006281": { nombre: "Galletas Marías Gamesa (8 pzas)", calorias: 140 },
+            "7501017004652": { nombre: "Galletas Chokis Gamesa (pza)", calorias: 75 },
+            "1": { nombre: "Tortilla de Maíz (1 pieza)", calorias: 64 },
+            "2": { nombre: "Tortilla de Harina (1 pieza)", calorias: 90 },
+            "3": { nombre: "Taco de Pastor con todo (1 pza)", calorias: 150 },
+            "4": { nombre: "Taco de Bistec (1 pza)", calorias: 130 },
+            "5": { nombre: "Pechuga de Pollo Asada (100g)", calorias: 165 },
+            "6": { nombre: "Arroz Rojo Cocinado (100g)", calorias: 140 },
+            "7": { nombre: "Huevo Revuelto (pza)", calorias: 90 },
+            "8": { nombre: "Frijoles de la Olla (1 taza)", calorias: 180 },
+            "9": { nombre: "Aguacate (1/2 pieza)", calorias: 120 },
+            "10": { nombre: "Queso Oaxaca (30g)", calorias: 85 },
+            "11": { nombre: "Plátano (1 pieza)", calorias: 90 },
+            "12": { nombre: "Manzana Roja (1 pieza)", calorias: 52 },
+            "13": { nombre: "Bolillo sin migajón (1 pieza)", calorias: 125 },
+            "14": { nombre: "Chilaquiles Verdes (plato)", calorias: 420 },
+            "15": { nombre: "Quesadilla con Queso (1 pieza)", calorias: 170 }
+        };
+
+        // Cambiamos el nombre a un disparador completamente nuevo e inédito
+        function accionBuscarAlimento() {
+            var inputElement = document.getElementById('manual-barcode-input');
+            var statusDiv = document.getElementById('scanner-status');
+            
+            if (!inputElement || !statusDiv) return;
+            var barcodeValue = inputElement.value.trim();
+            
+            if (barcodeValue === "") {
+                statusDiv.style.color = "#ef4444";
+                statusDiv.textContent = "Por favor, escribe un código primero.";
+                return;
+            }
+            
+            statusDiv.style.color = "#4f46e5";
+            statusDiv.textContent = "Buscando...";
+            
+            if (BD_LOCAL[barcodeValue]) {
+                var product = BD_LOCAL[barcodeValue];
+                statusDiv.style.color = "#059669";
+                statusDiv.textContent = "¡Encontrado!: " + product.nombre;
+                addFood(product.nombre, product.calorias);
+                inputElement.value = "";
+            } else {
+                askManualInput("Producto Nuevo (" + barcodeValue + ")");
+            }
+        }
+
+        function askManualInput(defaultName) {
+            var statusDiv = document.getElementById('scanner-status');
+            statusDiv.style.color = "#d97706";
+            statusDiv.textContent = "Introduce los datos manualmente:";
+            
+            var customName = prompt("Nombre del alimento o marca:", defaultName);
+            if (customName === null || customName.trim() === "") {
+                statusDiv.style.color = "#4b5563";
+                statusDiv.textContent = "Búsqueda cancelada.";
+                return;
+            }
+            
+            var customKcalText = prompt("Calorías del alimento:", "150");
+            if (customKcalText === null) {
+                statusDiv.style.color = "#4b5563";
+                statusDiv.textContent = "Búsqueda cancelada.";
+                return;
+            }
+            
+            var customKcal = parseInt(customKcalText);
+            if (isNaN(customKcal) || customKcal < 0) {
+                alert("Por favor introduce un número válido.");
+                return;
+            }
+            
+            statusDiv.style.color = "#059669";
+            statusDiv.textContent = "¡Agregado con éxito!: " + customName;
+            addFood(customName, customKcal);
+            document.getElementById('manual-barcode-input').value = "";
+        }
+
+        function addFood(name, kcal) {
+            dailyLog.push({ id: Date.now(), foodName: name, foodKcal: kcal });
+            localStorage.setItem('myDailyCalorieLog', JSON.stringify(dailyLog));
+            render();
+        }
+
+        function reiniciarDia() {
+            if (confirm("¿Borrar todos los alimentos de hoy? El contador volverá a 0.")) {
+                dailyLog = [];
+                localStorage.removeItem('myDailyCalorieLog');
+                render();
+                var statusDiv = document.getElementById('scanner-status');
+                statusDiv.style.color = "#1e1b4b";
+                statusDiv.textContent = "Diario reiniciado con éxito.";
+            }
+        }
+
+        function render() {
+            var list = document.getElementById('daily-log-list');
+            var total = 0;
+            if (!list) return;
+
+            if (dailyLog.length === 0) {
+                list.innerHTML = '<p class="empty-text">No has registrado alimentos hoy.</p>';
+            } else {
+                list.innerHTML = dailyLog.map(function(item) {
+                    total += item.foodKcal;
+                    return '<div class="log-item">' +
+                            '<div class="log-info">' +
+                                '<h4>' + item.foodName + '</h4>' +
+                                '<p>Porción registrada</p>' +
+                            '</div>' +
+                            '<div class="log-actions">' +
+                                '<span class="log-kcal">' + item.foodKcal + ' kcal</span>' +
+                                '<button onclick="eliminarItem(' + item.id + ')" class="btn-delete">&times;</button>' +
+                            '</div>' +
+                        '</div>';
+                }).join('');
+            }
+            
+            document.getElementById('total-calories').textContent = total;
+            var bar = document.getElementById('calorie-bar');
+            if (bar) {
+                bar.style.width = Math.min((total / calorieTarget) * 100, 100) + "%";
+                bar.style.backgroundColor = total > calorieTarget ? "#ef4444" : "#4f46e5";
+            }
+        }
+
+        window.eliminarItem = function(id) {
+            dailyLog = dailyLog.filter(function(item) { return item.id !== id; });
+            localStorage.setItem('myDailyCalorieLog', JSON.stringify(dailyLog));
+            render();
+        };
+
+        window.addEventListener('DOMContentLoaded', render);
+    </script>
+
+    <style>
+        body {
+            background-color: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+        .app-container {
+            width: 100%;
+            max-width: 450px;
+            background-color: #ffffff;
+            min-height: 100vh;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        header {
+            background-color: #4f46e5;
+            color: #ffffff;
+            padding: 16px;
+            text-align: center;
+        }
+        header h1 { margin: 0; font-size: 20px; font-weight: 700; }
+        main { padding: 16px; display: flex; flex-direction: column; gap: 24px; }
+        .card { background-color: #f9fafb; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; }
+        .white-card { background-color: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid #e5e7eb; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .card h2, .white-card h3, .section-title { margin: 0 0 8px 0; font-size: 14px; font-weight: 700; color: #374151; text-transform: uppercase; }
+        .calorie-flex { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 8px; }
+        .big-calories { font-size: 32px; font-weight: 900; color: #4f46e5; }
+        .progress-bg { width: 100%; background-color: #e5e7eb; height: 12px; border-radius: 9999px; overflow: hidden; }
+        .progress-bar { height: 12px; border-radius: 9999px; width: 0%; background-color: #4f46e5; transition: width 0.3s ease; }
+        .search-form { display: flex; gap: 8px; margin-top: 12px; }
+        input[type="text"] { flex: 1; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px; font-size: 13px; outline: none; }
+        .btn-search { cursor: pointer; font-weight: 600; padding: 10px 20px; border-radius: 8px; font-size: 13px; border: none; background-color: #059669; color: #ffffff; }
+        .btn-search:hover { background-color: #047857; }
+.btn-danger-clear { width: 100%; cursor: pointer; font-weight: 600; padding: 10px; border-radius: 8px; font-size: 12px; border: none; background-color: #ef4444; color: #ffffff; margin-top: 8px; transition: background-color 0.2s; }
+.btn-danger-clear:hover { background-color: #dc2626; }
+#scanner-status { text-align: center; margin-top: 12px; font-size: 13px; font-weight: 600; color: #1e1b4b; background-color: #e0e7ff; padding: 10px; border-radius: 6px; }
+.log-item { display: flex; justify-content: space-between; align-items: center; background-color: rgba(79, 70, 229, 0.05); border: 1px solid rgba(79, 70, 229, 0.1); padding: 12px; border-radius: 12px; margin-bottom: 8px; }
+.log-info h4 { margin: 0; font-size: 13px; color: #1f2937; }
+.log-info p { margin: 2px 0 0 0; font-size: 10px; color: #9ca3af; }
+.log-actions { display: flex; align-items: center; gap: 12px; }
+.log-kcal { font-size: 13px; font-weight: 800; color: #374151; }
+.btn-delete { background: none; border: none; color: #9ca3af; font-size: 18px; cursor: pointer; padding: 0 4px; }
+.btn-delete:hover { color: #ef4444; }
+.empty-text { font-size: 12px; color: #9ca3af; text-align: center; padding: 16px 0; border: 1px dashed #d1d5db; border-radius: 8px; }
